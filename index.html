@@ -1,5 +1,1137 @@
 <!doctype html>
-<!--
-This file is intentionally identical to your TOP_Generator HTML.
-Replace this file's content with your existing TOP_Generator_newcolors.html content.
--->
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>IQ Puzzle – Generator + Solver (Single File)</title>
+
+  <style>
+    :root{
+      --bg: #0f1115;
+      --panel: #151923;
+      --panel2:#111521;
+      --text:#e7e9ee;
+      --muted:#a9afbd;
+      --border: rgba(255,255,255,.10);
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --chip:#23283a;
+      --btn:#23283a;
+      --btn2:#1b2030;
+      --accent:#7aa2ff;
+      --danger:#ff6b6b;
+      --ok:#4ade80;
+      --warn:#fbbf24;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --radius: 16px;
+    }
+
+    [data-theme="light"]{
+      --bg: #f6f7fb;
+      --panel:#ffffff;
+      --panel2:#ffffff;
+      --text:#111827;
+      --muted:#4b5563;
+      --border: rgba(17,24,39,.12);
+      --shadow: 0 10px 30px rgba(17,24,39,.10);
+      --chip:#f1f5ff;
+      --btn:#eef2ff;
+      --btn2:#e8eaf8;
+      --accent:#355cff;
+    }
+
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    }
+
+    .wrap{
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 18px;
+    }
+
+    .topbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom: 14px;
+    }
+
+    .title{
+      display:flex;
+      align-items:baseline;
+      gap:12px;
+    }
+    .title h1{
+      margin:0;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing:.2px;
+    }
+    .title .sub{
+      color: var(--muted);
+      font-size: 13px;
+      font-family: var(--mono);
+    }
+
+    .actions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+
+    .btn{
+      border:1px solid var(--border);
+      background: var(--btn);
+      color: var(--text);
+      padding: 9px 12px;
+      border-radius: 12px;
+      cursor:pointer;
+      font-weight: 600;
+      font-size: 13px;
+      box-shadow: 0 6px 18px rgba(0,0,0,.12);
+      transition: transform .06s ease, background .15s ease, border-color .15s ease;
+      user-select:none;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+    }
+    .btn:hover{ background: var(--btn2); border-color: rgba(255,255,255,.18); }
+    .btn:active{ transform: translateY(1px); }
+    .btn:disabled{ opacity:.55; cursor:not-allowed; transform:none; }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1.05fr 1.3fr .75fr;
+      gap:14px;
+    }
+
+    @media (max-width: 980px){
+      .grid{ grid-template-columns: 1fr; }
+    }
+
+    .card{
+      background: var(--panel);
+      border:1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+
+    .card .hd{
+      padding: 14px 14px 10px 14px;
+      border-bottom: 1px solid var(--border);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    }
+
+    .card .hd h2{
+      margin:0;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing:.35px;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-family: var(--mono);
+    }
+
+    .card .bd{
+      padding: 14px;
+    }
+
+    .row{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+
+    .field{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      min-width: 180px;
+    }
+    .field label{
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 700;
+      letter-spacing:.2px;
+    }
+
+    input[type="range"]{ width: 220px; }
+    .mono{ font-family: var(--mono); }
+
+    .chip{
+      background: var(--chip);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+      font-family: var(--mono);
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+    }
+    .chip .dot{
+      width: 8px;
+      height: 8px;
+      border-radius: 99px;
+      background: var(--accent);
+      box-shadow: 0 0 0 3px rgba(122,162,255,.15);
+    }
+    .chip.easy .dot{ background: var(--ok); box-shadow:0 0 0 3px rgba(74,222,128,.18); }
+    .chip.medium .dot{ background: var(--warn); box-shadow:0 0 0 3px rgba(251,191,36,.18); }
+    .chip.hard .dot{ background: var(--danger); box-shadow:0 0 0 3px rgba(255,107,107,.18); }
+
+    .small{
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .palette{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin-top: 8px;
+    }
+    .pbtn{
+      width: 44px;
+      height: 44px;
+      border-radius: 999px;
+      border: 1px dashed rgba(255,255,255,.25);
+      cursor:pointer;
+      font-family: var(--mono);
+      font-weight: 900;
+      color:#0b0e14;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      user-select:none;
+      transition: transform .06s ease, filter .15s ease;
+    }
+    [data-theme="light"] .pbtn{ border:1px dashed rgba(17,24,39,.25); }
+    .pbtn:hover{ filter: brightness(1.05); transform: translateY(-1px); }
+    .pbtn.active{ outline: 3px solid rgba(122,162,255,.35); }
+
+    .boardWrap{
+      display:flex;
+      justify-content:center;
+      padding-top: 4px;
+    }
+
+    table.board{
+      border-collapse: separate;
+      border-spacing: 8px;
+    }
+
+    .cell{
+      width: 52px;
+      height: 52px;
+      border-radius: 999px;
+      border: 1px dashed rgba(255,255,255,.28);
+      background: rgba(255,255,255,.06);
+      font-family: var(--mono);
+      font-size: 22px;
+      font-weight: 900;
+      text-align:center;
+      cursor:pointer;
+      user-select:none;
+      transition: transform .06s ease, filter .15s ease, box-shadow .15s ease, border-color .15s ease;
+    }
+    [data-theme="light"] .cell{ border:1px dashed rgba(17,24,39,.28); background: rgba(17,24,39,.04); }
+    .cell:hover{
+      transform: translateY(-1px);
+      filter: brightness(1.03);
+      border-color: rgba(122,162,255,.45);
+      box-shadow: 0 8px 18px rgba(0,0,0,.18);
+    }
+
+    .out{
+      background: var(--panel2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 10px 12px;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--muted);
+      min-height: 42px;
+      line-height: 1.45;
+      white-space: pre-wrap;
+      overflow:auto;
+    }
+
+    .share{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    .share input{
+      flex:1;
+      min-width: 220px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border:1px solid var(--border);
+      background: var(--panel2);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 12px;
+      outline:none;
+    }
+
+    .hr{
+      height:1px;
+      background: var(--border);
+      margin: 12px 0;
+    }
+
+    .tiny{
+      font-size: 11px;
+      color: var(--muted);
+      font-family: var(--mono);
+    }
+  </style>
+</head>
+
+<body data-theme="dark">
+  <div class="wrap">
+    <div class="topbar">
+      <div class="title">
+        <h1>IQ Puzzle – Generator + Solver</h1>
+        <div class="sub">Single-File • offline • n= Share-Code</div>
+      </div>
+      <div class="actions">
+        <button class="btn" id="btnTheme" type="button">🌓 Theme</button>
+        <button class="btn" id="btnCopyLink" type="button">🔗 Copy Link</button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <!-- LEFT: Controls + Palette -->
+      <div class="card">
+        <div class="hd">
+          <h2>Generator</h2>
+          <span class="chip" id="chipDiff"><span class="dot"></span><span id="diffText">–</span></span>
+        </div>
+        <div class="bd">
+          <div class="row" style="justify-content:space-between; gap:14px;">
+            <div class="field">
+              <label>Gegebene Bauteile (2–12)</label>
+              <div class="row" style="gap:12px;">
+                <input type="range" id="rngPieces" min="2" max="12" value="5" />
+                <span class="chip mono"><span id="piecesVal">5</span> / 12</span>
+              </div>
+              <div class="small">Der Generator lässt nur so viele komplette Bauteile als Hinweise stehen.</div>
+            </div>
+
+            <div class="field" style="min-width: 220px;">
+              <label>Optionen</label>
+              <div class="row">
+                <span class="chip mono">
+                  <input id="chkUnique" type="checkbox" checked style="transform: translateY(1px);" />
+                  <label for="chkUnique" style="cursor:pointer; font-weight:800; color:var(--text);">Unique (1 Lösung)</label>
+                </span>
+                <span class="chip mono" title="Anzahl Versuche pro Generate">
+                  Attempts: <span id="attemptsVal">80</span>
+                </span>
+              </div>
+              <div class="small">Unique kann bei sehr wenigen Hinweisen länger dauern (oder fehlschlagen).</div>
+            </div>
+          </div>
+
+          <div class="hr"></div>
+
+          <div class="row">
+            <button class="btn" id="btnGenerate" type="button">✨ Generate</button>
+            <button class="btn" id="btnResetPuzzle" type="button">↩️ Reset</button>
+            <button class="btn" id="btnClear" type="button">🧽 Clear</button>
+          </div>
+
+          <div class="hr"></div>
+
+          <div class="field">
+            <label>Bauteil-Auswahl (klicken, dann Feld klicken)</label>
+            <div class="palette" id="palette"></div>
+            <div class="tiny">Tipp: „-“ löscht ein Feld.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CENTER: Board -->
+      <div class="card">
+        <div class="hd">
+          <h2>Board</h2>
+          <span class="tiny" id="boardInfo">11×5</span>
+        </div>
+        <div class="bd">
+          <div class="boardWrap">
+            <div id="gridMount"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Solver + Share -->
+      <div class="card">
+        <div class="hd">
+          <h2>Solver</h2>
+          <span class="tiny mono" id="statusTiny">ready</span>
+        </div>
+        <div class="bd">
+          <div class="row">
+            <button class="btn" id="btnSolve" type="button">✅ Solve</button>
+            <button class="btn" id="btnCount" type="button">🔢 Count</button>
+          </div>
+
+          <div class="hr"></div>
+
+          <div class="field">
+            <label>Result</label>
+            <div class="out" id="out">–</div>
+          </div>
+
+          <div class="hr"></div>
+
+          <div class="field">
+            <label>Share / Load (n= String)</label>
+            <div class="share">
+              <input id="txtShare" placeholder="z.B. -----------,---A---..., ..." />
+              <button class="btn" id="btnCopyCode" type="button">📋 Copy</button>
+              <button class="btn" id="btnLoadCode" type="button">📥 Load</button>
+            </div>
+            <div class="small">Format: 5 Zeilen mit je 11 Zeichen, getrennt durch Kommas. Zeichen: <span class="mono">- A–L</span></div>
+          </div>
+
+          <div class="hr"></div>
+
+          <div class="field">
+            <label>Solutions (bei Count)</label>
+            <div class="out" id="outSolutions" style="max-height: 260px;">–</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* ================================
+   ORIGINAL SOLVER (lutanho.net)
+   (unabhängig, client-side)
+================================ */
+
+// Author: Lutz Tautenhahn, 2024, https://www.lutanho.net/
+function Noodle(oor, oom, aa)
+{
+  this.x3y = new Int8Array(64);
+  this.o = oor * oom;
+  this.l = aa.length >> 1;
+  var xx = [], yy = [], ii, jj, mm;
+  var rr = [[1,0],[0,1],[-1,0],[0,-1]];
+
+  for (jj=0; jj<this.o; jj++){ xx[jj]=new Int8Array(16); yy[jj]=new Int8Array(16); }
+
+  for (jj=0; jj<oor*oom; jj++)
+  {
+    if (jj<oor){
+      for (ii=0; ii<this.l; ii++){
+        xx[jj][ii] = rr[(jj+0)%4][0]*aa[2*ii] + rr[(jj+0)%4][1]*aa[2*ii+1];
+        yy[jj][ii] = rr[(jj+1)%4][0]*aa[2*ii] + rr[(jj+1)%4][1]*aa[2*ii+1];
+      }
+    } else {
+      for (ii=0; ii<this.l; ii++){
+        xx[jj][ii] = rr[(jj+1)%4][0]*aa[2*ii] + rr[(jj+1)%4][1]*aa[2*ii+1];
+        yy[jj][ii] = rr[(jj+0)%4][0]*aa[2*ii] + rr[(jj+0)%4][1]*aa[2*ii+1];
+      }
+    }
+  }
+
+  for (jj=0; jj<this.o; jj++)
+  {
+    mm=9999;
+    for (ii=0; ii<this.l; ii++) if (mm>xx[jj][ii]) mm=xx[jj][ii];
+    for (ii=0; ii<this.l; ii++) xx[jj][ii]-=mm;
+
+    mm=9999;
+    for (ii=0; ii<this.l; ii++) if ((xx[jj][ii]==0)&&(mm>yy[jj][ii])) mm=yy[jj][ii];
+    for (ii=0; ii<this.l; ii++) yy[jj][ii]-=mm;
+
+    mm=0;
+    for (ii=1; ii<this.l; ii++) if ((xx[jj][ii]==0)&&(yy[jj][ii]==0)) mm=ii;
+    if (mm>0){
+      var tt = xx[jj][0]; xx[jj][0]=xx[jj][mm]; xx[jj][mm]=tt;
+      tt = yy[jj][0]; yy[jj][0]=yy[jj][mm]; yy[jj][mm]=tt;
+    }
+
+    for (ii=0; ii<this.l; ii++)
+      this.x3y[(jj<<3)+ii]=(xx[jj][ii]<<3)+yy[jj][ii];
+  }
+  return this;
+}
+
+function NoodleSolver()
+{
+  this.Next = new Int8Array(16);
+  this.Prev = new Int8Array(16);
+  this.IGrid = new Int8Array(128);
+  this.Noodles = [];
+
+  this.Solve = function(ii0, jj0, rr)
+  {
+    var gg, xx3y, ii3j, ii, jj, ll, mm, mmn, mmp, oo, pp, qq, qql, qqo;
+    var nnxt=this.Next, pprv=this.Prev;
+    gg=this.IGrid;
+
+    ii=ii0; jj=jj0;
+    while (gg[(ii<<3)+jj] > 0)
+    {
+      jj++; if (jj==5) { ii++; jj=0; }
+      if (ii==11)
+      {
+        this.SolutionCounter++;
+        if (this.SolutionCounter > rr) return 1;
+
+        this.Solutions += "#" + this.SolutionCounter + ":\n";
+        for (jj=0; jj<5; jj++)
+        {
+          if (this.Flip>0){ for (ii=10; ii>=0; ii--) this.Solutions += Letters.charAt(gg[(ii<<3)+jj]); }
+          else { for (ii=0; ii<11; ii++) this.Solutions += Letters.charAt(gg[(ii<<3)+jj]); }
+          this.Solutions += "\n";
+        }
+        this.Solutions += "\n";
+        return 0;
+      }
+    }
+
+    ii3j=(ii<<3)+jj;
+    mm=nnxt[0];
+    while (mm < 13)
+    {
+      qq=this.Noodles[mm-1];
+      qqo=qq.o;
+      qql=qq.l;
+      mmn=nnxt[mm];
+      mmp=pprv[mm];
+      pprv[mmn]=mmp;
+      nnxt[mmp]=mmn;
+
+      L:
+      for (pp=0; pp<qqo; pp++)
+      {
+        oo=pp<<3;
+        if (rr<0)
+        {
+          if (qqo==4) oo=this.SymOps4Order[pp]<<3;
+          if (qqo==8) oo=this.SymOps8Order[pp]<<3;
+        }
+        xx3y=qq.x3y;
+        for (ll=1; ll<qql; ll++) if (gg[xx3y[oo+ll]+ii3j] > 0) continue L;
+        for (ll=0; ll<qql; ll++) gg[xx3y[oo+ll]+ii3j] = mm;
+
+        if (this.Solve(ii, jj, rr)) return 1;
+
+        for (ll=0; ll<qql; ll++) gg[xx3y[oo+ll]+ii3j] = 0;
+      }
+
+      nnxt[mmp]=pprv[mmn]=mm;
+      mm=mmn;
+    }
+    return 0;
+  };
+
+  this.NoodleSymOps = new Int8Array(16);
+  this.NoodleRank = new Int8Array(16);
+  this.NoodleOrder = new Int8Array(16);
+  this.SymOps8Order = new Int8Array(16);
+  this.SymOps4Order = new Int8Array(16);
+  this.Solutions = "";
+  this.SolutionCounter = 0;
+  this.StartTime = new Date();
+
+  this.Init = function(tt, rr)
+  {
+    var ii, jj, nn, ss="-ABCDEFGHIJKL-abcdefghijkl", aa=tt.split(",");
+    var oo=this.NoodleOrder;
+
+    this.Solutions="";
+    this.SolutionCounter=0;
+    this.InitArray(this.SymOps8Order,0,8,rr);
+    this.InitArray(this.SymOps4Order,0,4,rr);
+    this.InitArray(oo,0,12,rr);
+
+    for (ii=0; ii<12; ii++) this.NoodleRank[oo[ii]] = ii;
+
+    for (ii=0; ii<12; ii++) this.NoodleSymOps[oo[ii]] = 8;
+    for (ii=5; ii<11; ii++) this.NoodleSymOps[oo[ii]] = 4;
+
+    this.Noodles[oo[0]]  = new Noodle(4,2,[0,0,1,0,2,0,0,1]); //A
+    this.Noodles[oo[1]]  = new Noodle(4,2,[0,0,1,0,2,0,0,1,1,1]); //B
+    this.Noodles[oo[2]]  = new Noodle(4,2,[0,0,1,0,2,0,3,0,0,1]); //C
+    this.Noodles[oo[3]]  = new Noodle(4,2,[0,0,1,0,2,0,3,0,1,1]); //D
+    this.Noodles[oo[4]]  = new Noodle(4,2,[0,0,1,0,2,0,2,1,3,1]); //E
+    this.Noodles[oo[5]]  = new Noodle(4,1,[0,0,1,0,0,1]); //F
+    this.Noodles[oo[6]]  = new Noodle(4,1,[0,0,1,0,2,0,0,1,0,2]); //G
+    this.Noodles[oo[7]]  = new Noodle(4,1,[0,0,1,0,1,1,2,1,2,2]); //H
+    this.Noodles[oo[8]]  = new Noodle(4,1,[0,0,1,0,2,0,0,1,2,1]); //I
+    this.Noodles[oo[9]]  = new Noodle(4,1,[0,0,1,0,2,0,1,1]); //J
+    this.Noodles[oo[10]] = new Noodle(2,2,[0,0,1,0,1,1,2,1]); //K
+    this.Noodles[oo[11]] = new Noodle(4,2,[1,0,0,1,1,1,2,1,2,2]); //L
+
+    for (ii=0; ii<16; ii++) this.Next[ii]=ii+1;
+    for (ii=0; ii<16; ii++) this.Prev[ii]=ii-1;
+    for (ii=0; ii<128; ii++) this.IGrid[ii]=1;
+
+    if (aa.length!=5) return 0;
+    for (jj=0; jj<5; jj++) if (aa[jj].length!=11) return 0;
+
+    for (jj=0; jj<5; jj++)
+    for (ii=0; ii<11; ii++)
+    {
+      nn = ss.indexOf(aa[jj].charAt(ii));
+      if (nn <= 0) this.IGrid[(ii<<3)+jj]=0;
+      else
+      {
+        this.IGrid[(ii<<3)+jj] = oo[nn%13-1] + 1;
+        nn = oo[nn%13-1] + 1;
+        if (this.Prev[this.Next[nn]]==nn) this.Prev[this.Next[nn]] = this.Prev[nn];
+        if (this.Next[this.Prev[nn]]==nn) this.Next[this.Prev[nn]] = this.Next[nn];
+      }
+    }
+
+    this.CheckFlip(1);
+    return 1;
+  };
+
+  this.InitArray = function(aa, ss, ll, rr)
+  {
+    var ii, jj, nn;
+    for (nn=ss; nn<ss+ll; nn++) aa[nn]=nn;
+    if (rr>=0) return;
+    for (nn=0; nn<2*ll; nn++)
+    {
+      ii = ~~(Math.random()*ll);
+      jj = aa[ss + (nn%ll)];
+      aa[ss + (nn%ll)] = aa[ss + ii];
+      aa[ss + ii] = jj;
+    }
+  };
+
+  this.Flip=0;
+  this.CheckFlip = function(bb)
+  {
+    var ii, jj, nn=0;
+    if (bb)
+    {
+      for (ii=0; ii<11; ii++)
+      for (jj=0; jj<5; jj++)
+        if (this.IGrid[(ii<<3)+jj]) nn += (ii<<3)+jj - 42;
+      this.Flip=nn;
+    }
+    if (this.Flip>0)
+    {
+      for (ii=0; ii<5; ii++)
+      for (jj=0; jj<5; jj++)
+      {
+        nn=this.IGrid[(ii<<3)+jj];
+        this.IGrid[(ii<<3)+jj]=this.IGrid[((10-ii)<<3)+jj];
+        this.IGrid[((10-ii)<<3)+jj]=nn;
+      }
+    }
+  };
+
+  return this;
+}
+
+/* ================================
+   APP LOGIC + UI
+================================ */
+
+const Letters = "-ABCDEFGHIJKL-abcdefghijkl";
+
+// Farben (modern, dark-ui friendly)
+const Colors = [
+  "rgba(255,255,255,.10)", // '-'
+  "#0b3d91", // A (dunkelblau)
+  "#7ad3c1", // B
+  "#ff0033", // C (neon rot)
+  "#fff700", // D (neon gelb)
+  "#ff86b6", // E
+  "#9ab6ff", // F
+  "#41b6ff", // G
+  "#3b0a57", // H (dunkel lila)
+  "#89d60f", // I
+  "#006400", // J (dunkelgruen)
+  "#8b0000", // K (dunkelrot)
+  "#ff5f00", // L (neonorange)
+];
+
+const W = 11, H = 5;
+
+// Grid[ii][jj] (ii: 0..10, jj:0..4) => 0..12
+let Grid = Array.from({length: W}, () => Array(H).fill(0));
+
+// zuletzt generiertes Puzzle (für Reset)
+let LastPuzzleTT = null;
+
+// Selected piece/color
+let ColorIdx = 0;
+
+// Elements
+const el = (id) => document.getElementById(id);
+const out = el("out");
+const outSolutions = el("outSolutions");
+const statusTiny = el("statusTiny");
+const txtShare = el("txtShare");
+
+// ---------- helpers: theme ----------
+function setTheme(theme){
+  document.body.setAttribute("data-theme", theme);
+  localStorage.setItem("iqp_theme", theme);
+}
+function toggleTheme(){
+  const cur = document.body.getAttribute("data-theme") || "dark";
+  setTheme(cur === "dark" ? "light" : "dark");
+}
+
+// ---------- helpers: difficulty ----------
+function difficultyFromPieces(n){
+  if (n <= 3) return "hard";
+  if (n <= 6) return "medium";
+  return "easy";
+}
+function updateDifficultyChip(){
+  const n = parseInt(el("rngPieces").value, 10);
+  const d = difficultyFromPieces(n);
+  const chip = el("chipDiff");
+  chip.classList.remove("easy","medium","hard");
+  chip.classList.add(d);
+  el("diffText").textContent = d.toUpperCase();
+  el("piecesVal").textContent = String(n);
+}
+
+// ---------- board rendering ----------
+function paintCell(ii, jj){
+  const td = el(`c_${ii}_${jj}`);
+  const v = Grid[ii][jj];
+  td.style.background = Colors[v];
+  td.textContent = Letters.charAt(v);
+  td.style.color = (v === 0) ? "var(--muted)" : "#0b0e14";
+}
+
+function buildBoard(){
+  const mount = el("gridMount");
+  const tbl = document.createElement("table");
+  tbl.className = "board";
+
+  for (let jj=0; jj<H; jj++){
+    const tr = document.createElement("tr");
+    for (let ii=0; ii<W; ii++){
+      const td = document.createElement("td");
+      td.className = "cell";
+      td.id = `c_${ii}_${jj}`;
+      td.addEventListener("click", () => {
+        Grid[ii][jj] = ColorIdx;
+        paintCell(ii,jj);
+        updateShareBoxFromGrid();
+      });
+      tr.appendChild(td);
+    }
+    tbl.appendChild(tr);
+  }
+
+  mount.innerHTML = "";
+  mount.appendChild(tbl);
+
+  for (let jj=0; jj<H; jj++)
+    for (let ii=0; ii<W; ii++)
+      paintCell(ii,jj);
+}
+
+function buildPalette(){
+  const p = el("palette");
+  p.innerHTML = "";
+  for (let i=0;i<=12;i++){
+    const b = document.createElement("div");
+    b.className = "pbtn";
+    b.style.background = Colors[i];
+    b.textContent = Letters.charAt(i);
+    b.title = `Setze "${Letters.charAt(i)}"`;
+    b.addEventListener("click", ()=>{
+      ColorIdx = i;
+      [...p.children].forEach(x=>x.classList.remove("active"));
+      b.classList.add("active");
+    });
+    if (i===0) b.style.color = "var(--muted)";
+    p.appendChild(b);
+  }
+  p.children[0].classList.add("active");
+}
+
+// ---------- conversions (Grid <-> TT) ----------
+function gridToTT(grid){
+  // 5 rows of 11 chars, comma separated, reading ii=0..10 per row jj
+  const rows = [];
+  for (let jj=0;jj<H;jj++){
+    let s = "";
+    for (let ii=0;ii<W;ii++){
+      s += Letters.charAt(grid[ii][jj]);
+    }
+    rows.push(s);
+  }
+  return rows.join(",");
+}
+
+function ttToGrid(tt){
+  const parts = (tt||"").split(",");
+  if (parts.length !== 5) return null;
+  const g = Array.from({length: W}, () => Array(H).fill(0));
+  for (let jj=0;jj<H;jj++){
+    if (parts[jj].length !== 11) return null;
+    for (let ii=0;ii<W;ii++){
+      const ch = parts[jj].charAt(ii);
+      const idx = Letters.indexOf(ch);
+      if (idx < 0) return null;
+      g[ii][jj] = idx % 13; // '-' or A..L => 0..12
+    }
+  }
+  return g;
+}
+
+function applyGrid(g){
+  Grid = g;
+  for (let jj=0; jj<H; jj++)
+    for (let ii=0; ii<W; ii++)
+      paintCell(ii,jj);
+  updateShareBoxFromGrid();
+}
+
+// ---------- share / link ----------
+function updateShareBoxFromGrid(){
+  const tt = gridToTT(Grid);
+  txtShare.value = tt;
+  // keep URL in sync (nice for copy link)
+  const url = new URL(window.location.href);
+  url.searchParams.set("n", tt);
+  window.history.replaceState({}, "", url.toString());
+}
+
+async function copyText(str){
+  try{
+    await navigator.clipboard.writeText(str);
+    return true;
+  }catch(e){
+    // fallback
+    const ta = document.createElement("textarea");
+    ta.value = str;
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+    return ok;
+  }
+}
+
+// ---------- solver wrappers ----------
+function countSolutions(tt, limitToSecond=true){
+  const ss = new NoodleSolver();
+  const rr = limitToSecond ? 1 : 9999;
+  if (!ss.Init(tt, rr)) return { ok:false, count:0, solutions:"", ss:null };
+  ss.Solve(0,0,rr);
+  return { ok:true, count:ss.SolutionCounter, solutions:ss.Solutions, ss };
+}
+
+function solveOnceFillGrid(tt){
+  // returns solved grid (1..12 values) or null
+  const ss = new NoodleSolver();
+  if (!ss.Init(tt, -1)) return null;
+  const ok = ss.Solve(0,0,-1);
+  if (!ok) return null;
+
+  ss.CheckFlip(0);
+
+  // translate IGrid to 1..12 in A..L order (like original UI does)
+  const outG = Array.from({length: W}, () => Array(H).fill(0));
+  for (let jj=0;jj<H;jj++){
+    for (let ii=0;ii<W;ii++){
+      let oo = ss.IGrid[(ii<<3)+jj];
+      if (oo>0) oo = ss.NoodleRank[oo-1] + 1; // 1..12
+      outG[ii][jj] = oo;
+    }
+  }
+  return outG;
+}
+
+// ---------- generator ----------
+function generateFullSolutionTT(){
+  const empty = Array.from({length: W}, () => Array(H).fill(0));
+  const tt = gridToTT(empty);
+  const g = solveOnceFillGrid(tt);
+  if (!g) return null;
+  return gridToTT(g);
+}
+
+function buildPuzzleFromSolutionTT(solTT, cluePieces){
+  const g = ttToGrid(solTT);
+  if (!g) return null;
+
+  // map: piece -> cells
+  const cellsByPiece = new Map();
+  for (let jj=0;jj<H;jj++){
+    for (let ii=0;ii<W;ii++){
+      const p = g[ii][jj]; // 1..12
+      if (p<=0) continue;
+      if (!cellsByPiece.has(p)) cellsByPiece.set(p, []);
+      cellsByPiece.get(p).push([ii,jj]);
+    }
+  }
+
+  let pieces = Array.from(cellsByPiece.keys());
+
+  // shuffle pieces
+  for (let i=pieces.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [pieces[i], pieces[j]] = [pieces[j], pieces[i]];
+  }
+
+  // keep set
+  const keep = new Set(pieces);
+  for (let k=0; k<pieces.length && keep.size > cluePieces; k++){
+    keep.delete(pieces[k]);
+  }
+
+  // remove non-kept pieces
+  for (const p of pieces){
+    if (keep.has(p)) continue;
+    for (const [ii,jj] of cellsByPiece.get(p)){
+      g[ii][jj] = 0;
+    }
+  }
+
+  return gridToTT(g);
+}
+
+function setBusy(b){
+  const ids = ["btnGenerate","btnResetPuzzle","btnClear","btnSolve","btnCount","btnCopyCode","btnLoadCode","btnCopyLink","btnTheme"];
+  for (const id of ids) el(id).disabled = b;
+  statusTiny.textContent = b ? "working..." : "ready";
+}
+
+async function Generate(){
+  setBusy(true);
+  out.textContent = "generating...";
+  outSolutions.textContent = "–";
+
+  // let UI breathe
+  await new Promise(r=>setTimeout(r, 25));
+
+  const wantUnique = el("chkUnique").checked;
+  const cluePieces = parseInt(el("rngPieces").value, 10);
+  const attempts = 80;
+  el("attemptsVal").textContent = String(attempts);
+
+  let bestTT = null;
+  let lastReason = "";
+
+  for (let a=0; a<attempts; a++){
+    const solTT = generateFullSolutionTT();
+    if (!solTT){ lastReason = "no full solution"; continue; }
+
+    const puzzleTT = buildPuzzleFromSolutionTT(solTT, cluePieces);
+    if (!puzzleTT){ lastReason = "build failed"; continue; }
+
+    if (!wantUnique){
+      bestTT = puzzleTT;
+      break;
+    }
+
+    const info = countSolutions(puzzleTT, true); // only check if >1
+    if (info.ok && info.count === 1){
+      bestTT = puzzleTT;
+      break;
+    } else {
+      lastReason = info.ok ? ("not unique ("+info.count+"+)") : "invalid";
+    }
+  }
+
+  if (!bestTT){
+    out.textContent = "Generator: keine passende Aufgabe gefunden.\nTipp: Unique aus oder mehr Bauteile geben.\n(" + lastReason + ")";
+    setBusy(false);
+    return;
+  }
+
+  const g = ttToGrid(bestTT);
+  applyGrid(g);
+  LastPuzzleTT = bestTT;
+
+  const d = difficultyFromPieces(cluePieces);
+  out.textContent = `generated ✓  |  pieces=${cluePieces}  |  difficulty=${d.toUpperCase()}  |  unique=${wantUnique ? "ON" : "OFF"}`;
+  setBusy(false);
+}
+
+// ---------- actions ----------
+async function Solve(){
+  setBusy(true);
+  out.textContent = "solving...";
+  outSolutions.textContent = "–";
+  await new Promise(r=>setTimeout(r, 25));
+
+  const tt = gridToTT(Grid);
+  const solved = solveOnceFillGrid(tt);
+
+  if (!solved){
+    out.textContent = "no solution found :-(";
+    setBusy(false);
+    return;
+  }
+
+  applyGrid(solved);
+  out.textContent = "solved :-)";
+  setBusy(false);
+}
+
+async function Count(){
+  setBusy(true);
+  out.textContent = "counting...";
+  outSolutions.textContent = "–";
+  await new Promise(r=>setTimeout(r, 25));
+
+  const tt = gridToTT(Grid);
+  const info = countSolutions(tt, false);
+
+  if (!info.ok){
+    out.textContent = "invalid input data :-(";
+    outSolutions.textContent = "–";
+    setBusy(false);
+    return;
+  }
+
+  out.textContent = (info.count === 1) ? "1 solution found" : (info.count + " solutions found");
+  outSolutions.textContent = info.solutions ? info.solutions : "–";
+  setBusy(false);
+}
+
+function ClearBoard(){
+  Grid = Array.from({length: W}, () => Array(H).fill(0));
+  for (let jj=0; jj<H; jj++)
+    for (let ii=0; ii<W; ii++)
+      paintCell(ii,jj);
+  updateShareBoxFromGrid();
+  out.textContent = "cleared";
+  outSolutions.textContent = "–";
+}
+
+function ResetPuzzle(){
+  if (!LastPuzzleTT){
+    out.textContent = "reset: kein gespeichertes Puzzle (erst Generate oder Load)";
+    return;
+  }
+  const g = ttToGrid(LastPuzzleTT);
+  if (!g){
+    out.textContent = "reset failed (stored puzzle invalid)";
+    return;
+  }
+  applyGrid(g);
+  out.textContent = "reset ✓";
+  outSolutions.textContent = "–";
+}
+
+async function CopyCode(){
+  const tt = gridToTT(Grid);
+  const ok = await copyText(tt);
+  out.textContent = ok ? "copied code ✓" : "copy failed";
+}
+
+async function CopyLink(){
+  const tt = gridToTT(Grid);
+  const url = new URL(window.location.href);
+  url.searchParams.set("n", tt);
+  const ok = await copyText(url.toString());
+  out.textContent = ok ? "copied link ✓" : "copy link failed";
+}
+
+function LoadCode(){
+  const raw = (txtShare.value || "").trim();
+  const g = ttToGrid(raw);
+  if (!g){
+    out.textContent = "load failed: ungültiges Format";
+    return;
+  }
+  applyGrid(g);
+  LastPuzzleTT = raw; // sinnvoll: Reset soll auf geladenes Puzzle zurück
+  out.textContent = "loaded ✓";
+  outSolutions.textContent = "–";
+}
+
+// ---------- init ----------
+function initFromURL(){
+  const url = new URL(window.location.href);
+  const n = url.searchParams.get("n");
+  if (n){
+    const g = ttToGrid(n);
+    if (g){
+      applyGrid(g);
+      LastPuzzleTT = n;
+      out.textContent = "loaded from link ✓";
+      return;
+    }
+  }
+  updateShareBoxFromGrid();
+  out.textContent = "ready";
+}
+
+function initTheme(){
+  const saved = localStorage.getItem("iqp_theme");
+  if (saved === "light" || saved === "dark"){
+    setTheme(saved);
+  } else {
+    setTheme("dark");
+  }
+}
+
+function wireUI(){
+  el("btnTheme").addEventListener("click", toggleTheme);
+  el("btnCopyLink").addEventListener("click", CopyLink);
+
+  el("rngPieces").addEventListener("input", ()=>{
+    updateDifficultyChip();
+  });
+
+  el("btnGenerate").addEventListener("click", Generate);
+  el("btnResetPuzzle").addEventListener("click", ResetPuzzle);
+  el("btnClear").addEventListener("click", ClearBoard);
+
+  el("btnSolve").addEventListener("click", Solve);
+  el("btnCount").addEventListener("click", Count);
+
+  el("btnCopyCode").addEventListener("click", CopyCode);
+  el("btnLoadCode").addEventListener("click", LoadCode);
+
+  // Enter in share box loads
+  txtShare.addEventListener("keydown", (e)=>{
+    if (e.key === "Enter"){
+      e.preventDefault();
+      LoadCode();
+    }
+  });
+}
+
+(function main(){
+  initTheme();
+  buildPalette();
+  buildBoard();
+  wireUI();
+  updateDifficultyChip();
+  initFromURL();
+})();
+</script>
+</body>
+</html>
