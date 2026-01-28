@@ -301,6 +301,20 @@
       color: var(--muted);
       font-family: var(--mono);
     }
+
+    .chip input[type="number"], .chip select{
+      background: transparent;
+      border: none;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 900;
+      outline: none;
+    }
+    .chip input[type="number"]{ width: 86px; padding: 0; }
+    .chip select{ padding: 0 2px; }
+    .chip.expert .dot{ background: #a78bfa; box-shadow:0 0 0 3px rgba(167,139,250,.18); }
+
   </style>
 </head>
 
@@ -335,18 +349,55 @@
               <div class="small">Der Generator lässt nur so viele komplette Bauteile als Hinweise stehen.</div>
             </div>
 
-            <div class="field" style="min-width: 220px;">
+            <div class="field" style="min-width: 260px;">
               <label>Optionen</label>
               <div class="row">
                 <span class="chip mono">
                   <input id="chkUnique" type="checkbox" checked style="transform: translateY(1px);" />
                   <label for="chkUnique" style="cursor:pointer; font-weight:800; color:var(--text);">Unique (1 Lösung)</label>
                 </span>
-                <span class="chip mono" title="Anzahl Versuche pro Generate">
-                  Attempts: <span id="attemptsVal">80</span>
+
+                <span class="chip mono" title="Erzwingt genau 3 Hinweis-Bauteile">
+                  <input id="chkThreeOnly" type="checkbox" style="transform: translateY(1px);" />
+                  <label for="chkThreeOnly" style="cursor:pointer; font-weight:800; color:var(--text);">3 Teile</label>
+                </span>
+
+                <span class="chip mono" title="Hinweise sollen eher verteilt liegen (hilft besonders bei 3 Teilen)">
+                  <input id="chkSpread" type="checkbox" checked style="transform: translateY(1px);" />
+                  <label for="chkSpread" style="cursor:pointer; font-weight:800; color:var(--text);">Spread</label>
                 </span>
               </div>
-              <div class="small">Unique kann bei sehr wenigen Hinweisen länger dauern (oder fehlschlagen).</div>
+
+              <div class="row" style="margin-top:8px;">
+                <span class="chip mono" title="Max. Versuche (Anzahl kompletter Lösungen, die ausprobiert werden)">
+                  Attempts:
+                  <input id="numAttempts" type="number" min="10" max="2000" step="10" value="200" />
+                </span>
+
+                <span class="chip mono" title="Zeitbudget pro Generate (ms)">
+                  Budget(ms):
+                  <input id="numBudgetMs" type="number" min="200" max="20000" step="100" value="2500" />
+                </span>
+              </div>
+
+              <div class="row" style="margin-top:8px;">
+                <span class="chip mono" title="Ziel-Schwierigkeit (gemessen über Solver-Aufwand)">
+                  Target:
+                  <select id="selTarget">
+                    <option value="any" selected>ANY</option>
+                    <option value="easy">EASY</option>
+                    <option value="medium">MED</option>
+                    <option value="hard">HARD</option>
+                    <option value="expert">EXPERT</option>
+                  </select>
+                </span>
+
+                <span class="chip mono" title="Anzahl Versuche in dieser Session (Info)">
+                  Tried: <span id="attemptsVal">0</span>
+                </span>
+              </div>
+
+              <div class="small">Bei <span class="mono">3 Teile + Unique</span> braucht der Generator oft mehr Zeit/Versuche. Mit <span class="mono">Target</span> bekommst du gezielt Variationen nach Schwierigkeit.</div>
             </div>
           </div>
 
@@ -417,7 +468,58 @@
           <div class="field">
             <label>Solutions (bei Count)</label>
             <div class="out" id="outSolutions" style="max-height: 260px;">–</div>
+          
+          <div class="hr"></div>
+
+          <div class="field">
+            <label>Analyse & Hints</label>
+            <div class="row">
+              <button class="btn" id="btnAnalyze" type="button">🧠 Analyze</button>
+              <button class="btn" id="btnNextHint" type="button">💡 Next Hint</button>
+              <button class="btn" id="btnApplyHint" type="button">🧩 Apply Hint</button>
+            </div>
+            <div class="row" style="margin-top:8px;">
+              <span class="chip mono" title="Max. Anzahl Kandidatenlösungen (nur für Analyse/Statistik). Bei Unique ist die echte Lösung 1; hier nutzen wir zusätzlich heuristische Placement-Analyse.">
+                Samples:
+                <input id="numAnalyzeSamples" type="number" min="1" max="5000" step="10" value="300" />
+              </span>
+              <span class="chip mono" title="Zeitbudget für Analyse (ms).">
+                Budget(ms):
+                <input id="numAnalyzeBudgetMs" type="number" min="200" max="20000" step="100" value="1500" />
+              </span>
+              <span class="chip mono" title="Duplikate beim Generieren vermeiden (speichert local).">
+                <input id="chkNoDups" type="checkbox" checked style="transform: translateY(1px);" />
+                <label for="chkNoDups" style="cursor:pointer; font-weight:800; color:var(--text);">No Dups</label>
+              </span>
+            </div>
+            <div class="out" id="outAnalysis" style="max-height: 260px;">–</div>
+            <div class="tiny">„Next Hint“ nutzt erst Zwangsplatzierungen, sonst die beste Stelle zum „Splitten“ (größter Informationsgewinn).</div>
           </div>
+
+          <div class="hr"></div>
+
+          <div class="field">
+            <label>Batch / Export</label>
+            <div class="row" style="flex-wrap:wrap;">
+              <span class="chip mono">Batch N:
+                <input id="numBatchN" type="number" min="1" max="5000" step="1" value="50" />
+              </span>
+              <span class="chip mono" title="Exportformat">
+                Format:
+                <select id="selExportFmt">
+                  <option value="jsonl" selected>JSONL</option>
+                  <option value="json">JSON</option>
+                  <option value="csv">CSV</option>
+                </select>
+              </span>
+              <button class="btn" id="btnBatch" type="button">📦 Batch Generate</button>
+              <button class="btn" id="btnDownload" type="button">⬇️ Download</button>
+              <button class="btn" id="btnClearHistory" type="button">🗑️ Clear History</button>
+            </div>
+            <div class="out" id="outBatch" style="max-height: 260px;">–</div>
+            <div class="tiny">Export enthält Puzzle-Code, Lösung, Difficulty-Score, Solver-Metriken & Heuristik-Stats.</div>
+          </div>
+</div>
         </div>
       </div>
     </div>
@@ -490,6 +592,7 @@ function NoodleSolver()
     var gg, xx3y, ii3j, ii, jj, ll, mm, mmn, mmp, oo, pp, qq, qql, qqo;
     var nnxt=this.Next, pprv=this.Prev;
     gg=this.IGrid;
+    this.NodesVisited++;
 
     ii=ii0; jj=jj0;
     while (gg[(ii<<3)+jj] > 0)
@@ -536,9 +639,11 @@ function NoodleSolver()
         xx3y=qq.x3y;
         for (ll=1; ll<qql; ll++) if (gg[xx3y[oo+ll]+ii3j] > 0) continue L;
         for (ll=0; ll<qql; ll++) gg[xx3y[oo+ll]+ii3j] = mm;
+        this.PlacementsTried++;
 
         if (this.Solve(ii, jj, rr)) return 1;
 
+        this.UndoCount++;
         for (ll=0; ll<qql; ll++) gg[xx3y[oo+ll]+ii3j] = 0;
       }
 
@@ -564,6 +669,9 @@ function NoodleSolver()
 
     this.Solutions="";
     this.SolutionCounter=0;
+    this.NodesVisited=0;
+    this.PlacementsTried=0;
+    this.UndoCount=0;
     this.InitArray(this.SymOps8Order,0,8,rr);
     this.InitArray(this.SymOps4Order,0,4,rr);
     this.InitArray(oo,0,12,rr);
@@ -691,6 +799,52 @@ const out = el("out");
 const outSolutions = el("outSolutions");
 const statusTiny = el("statusTiny");
 const txtShare = el("txtShare");
+// ---------- caches / history ----------
+const HIST_KEY = "iqp_hist_v1";
+const MAX_HIST = 5000;
+
+let GeneratedHistory = new Set();
+let BatchResults = [];
+let LastHint = null;
+
+const CountCacheSecond = new Map(); // tt -> 0..2 (Unique-Check)
+const MetricsCache = new Map();     // tt -> {ms,nodes,placements,undos}
+
+function loadHistory(){
+  try{
+    const raw = localStorage.getItem(HIST_KEY);
+    if (!raw) return;
+    const arr = JSON.parse(raw);
+    if (Array.isArray(arr)){
+      GeneratedHistory = new Set(arr.slice(0, MAX_HIST));
+    }
+  }catch(e){}
+}
+
+function saveHistory(){
+  try{
+    const arr = Array.from(GeneratedHistory);
+    // keep last MAX_HIST entries
+    const trimmed = arr.slice(Math.max(0, arr.length - MAX_HIST));
+    localStorage.setItem(HIST_KEY, JSON.stringify(trimmed));
+  }catch(e){}
+}
+
+function rememberPuzzle(tt){
+  GeneratedHistory.add(tt);
+  if (GeneratedHistory.size > MAX_HIST){
+    // simple trim: rebuild set from tail
+    const arr = Array.from(GeneratedHistory);
+    GeneratedHistory = new Set(arr.slice(arr.length - MAX_HIST));
+  }
+  saveHistory();
+}
+
+function clearHistory(){
+  GeneratedHistory = new Set();
+  saveHistory();
+}
+
 
 // ---------- helpers: theme ----------
 function setTheme(theme){
@@ -703,21 +857,57 @@ function toggleTheme(){
 }
 
 // ---------- helpers: difficulty ----------
-function difficultyFromPieces(n){
+let LastGenDifficulty = null; // {score, tier, cluePieces}
+
+function difficultyTierFromPiecesPreview(n){
+  // nur grobe Vorschau basierend auf Hint-Anzahl
   if (n <= 3) return "hard";
   if (n <= 6) return "medium";
   return "easy";
 }
-function updateDifficultyChip(){
-  const n = parseInt(el("rngPieces").value, 10);
-  const d = difficultyFromPieces(n);
-  const chip = el("chipDiff");
-  chip.classList.remove("easy","medium","hard");
-  chip.classList.add(d);
-  el("diffText").textContent = d.toUpperCase();
-  el("piecesVal").textContent = String(n);
+
+function difficultyTierFromScore(score){
+  if (score >= 9) return "expert";
+  if (score >= 7) return "hard";
+  if (score >= 4) return "medium";
+  return "easy";
 }
 
+function bandForTarget(t){
+  switch(t){
+    case "easy": return {min:1, max:3};
+    case "medium": return {min:4, max:6};
+    case "hard": return {min:7, max:8};
+    case "expert": return {min:9, max:10};
+    default: return null; // any
+  }
+}
+
+function setDifficultyChip(tier, text){
+  const chip = el("chipDiff");
+  chip.classList.remove("easy","medium","hard","expert");
+  chip.classList.add(tier);
+  el("diffText").textContent = text;
+}
+
+function updateDifficultyChip(){
+  const threeOnly = el("chkThreeOnly")?.checked;
+  const n = threeOnly ? 3 : parseInt(el("rngPieces").value, 10);
+
+  el("piecesVal").textContent = String(n);
+
+  // Wenn wir ein zuletzt gemessenes Rating haben (und die Hint-Anzahl dazu passt), zeig das an.
+  if (LastGenDifficulty && LastGenDifficulty.cluePieces === n){
+    setDifficultyChip(LastGenDifficulty.tier, `D ${LastGenDifficulty.score}/10`);
+    return;
+  }
+
+  // sonst: Vorschau
+  const tier = difficultyTierFromPiecesPreview(n);
+  setDifficultyChip(tier, `${tier.toUpperCase()} • ${n}`);
+}
+
+// ---------- board rendering ----------
 // ---------- board rendering ----------
 function paintCell(ii, jj){
   const td = el(`c_${ii}_${jj}`);
@@ -870,6 +1060,132 @@ function solveOnceFillGrid(tt){
   return outG;
 }
 
+
+// ---------- difficulty metrics ----------
+function nowMs(){
+  return (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
+}
+
+function solveWithMetrics(tt){
+  // Cache (für Generator/Batch). Enthält nur Metrics (grid wird neu erzeugt, wenn gebraucht).
+  if (MetricsCache.has(tt)){
+    const cached = MetricsCache.get(tt);
+    // wir geben ein Dummy-grid zurück, damit bestehender Code nicht kaputtgeht
+    return { ok:true, grid:null, metrics: {...cached}, cached:true };
+  }
+
+  const ss = new NoodleSolver();
+  const t0 = nowMs();
+  if (!ss.Init(tt, -1)) return { ok:false, reason:"init" };
+  const ok = ss.Solve(0,0,-1);
+  const t1 = nowMs();
+  if (!ok) return { ok:false, reason:"nosolve" };
+
+  ss.CheckFlip(0);
+
+  // grid wird für Difficulty nicht zwingend gebraucht – wird aber für "Solve" extra erzeugt
+  const metrics = {
+    ms: Math.max(0, t1 - t0),
+    nodes: ss.NodesVisited|0,
+    placements: ss.PlacementsTried|0,
+    undos: ss.UndoCount|0
+  };
+  MetricsCache.set(tt, metrics);
+
+  return { ok:true, grid:null, metrics };
+}
+
+
+function difficultyScoreFromMetrics(m, cluePieces){
+  // Heuristischer Score 1..10 (stabil, aber nicht „perfekt“ – für feinere Stufen ausreichend)
+  const nodes = Math.max(0, m.nodes||0);
+  const undos = Math.max(0, m.undos||0);
+  const ms = Math.max(0, m.ms||0);
+
+  const a = Math.log10(nodes + 1);
+  const b = Math.log10(undos + 1);
+  const c = Math.log10(ms + 1);
+
+  // nodes/undos dominieren, Zeit nur leicht (browser-/device-abhängig)
+  let raw = a*4.2 + b*3.2 + c*0.9 + (12 - cluePieces)*0.18;
+
+  // clamp & round to 1..10
+  let score = Math.round(raw);
+  if (score < 1) score = 1;
+  if (score > 10) score = 10;
+  return score;
+}
+
+function scoreFitsTarget(score, target){
+  const band = bandForTarget(target);
+  if (!band) return true;
+  return score >= band.min && score <= band.max;
+}
+
+// ---------- generator helpers ----------
+function cellsByPieceFromGrid(g){
+  const map = new Map();
+  for (let jj=0;jj<H;jj++){
+    for (let ii=0;ii<W;ii++){
+      const p = g[ii][jj];
+      if (p<=0) continue;
+      if (!map.has(p)) map.set(p, []);
+      map.get(p).push([ii,jj]);
+    }
+  }
+  return map;
+}
+
+function buildPuzzleFromSolutionTTKeepSet(solTT, keepSet){
+  const g = ttToGrid(solTT);
+  if (!g) return null;
+  const cellsByPiece = cellsByPieceFromGrid(g);
+  for (const [p, cells] of cellsByPiece.entries()){
+    if (keepSet.has(p)) continue;
+    for (const [ii,jj] of cells) g[ii][jj] = 0;
+  }
+  return gridToTT(g);
+}
+
+function randomSubset(arr, k){
+  // Fisher-Yates partial
+  const a = arr.slice();
+  for (let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a.slice(0, k);
+}
+
+function centroid(cells){
+  let sx=0, sy=0;
+  for (const [x,y] of cells){ sx += x; sy += y; }
+  return [sx/cells.length, sy/cells.length];
+}
+
+function spreadOK(cellsByPiece, keepPieces){
+  // „minimalistisch“: prüft, dass die 3/4 Hinweis-Teile nicht komplett zusammenkleben
+  const cents = [];
+  for (const p of keepPieces){
+    const cells = cellsByPiece.get(p);
+    if (!cells || !cells.length) continue;
+    cents.push(centroid(cells));
+  }
+  if (cents.length < 3) return true;
+
+  let minD = 999;
+  for (let i=0;i<cents.length;i++){
+    for (let j=i+1;j<cents.length;j++){
+      const dx = cents[i][0]-cents[j][0];
+      const dy = cents[i][1]-cents[j][1];
+      const d = Math.hypot(dx,dy);
+      if (d < minD) minD = d;
+    }
+  }
+  // Da Board relativ klein ist: ~2.6 ist ein brauchbarer Wert
+  return minD >= 2.4;
+}
+
 // ---------- generator ----------
 function generateFullSolutionTT(){
   const empty = Array.from({length: W}, () => Array(H).fill(0));
@@ -929,55 +1245,763 @@ async function Generate(){
   setBusy(true);
   out.textContent = "generating...";
   outSolutions.textContent = "–";
+  el("outAnalysis").textContent = "–";
+  el("outBatch").textContent = "–";
+  LastHint = null;
+  LastGenDifficulty = null;
+  updateDifficultyChip();
 
-  // let UI breathe
   await new Promise(r=>setTimeout(r, 25));
 
   const wantUnique = el("chkUnique").checked;
-  const cluePieces = parseInt(el("rngPieces").value, 10);
-  const attempts = 80;
-  el("attemptsVal").textContent = String(attempts);
+  const threeOnly = el("chkThreeOnly").checked;
+  const wantSpread = el("chkSpread").checked;
+  const noDups = el("chkNoDups")?.checked ?? true;
 
-  let bestTT = null;
-  let lastReason = "";
+  let cluePieces = parseInt(el("rngPieces").value, 10);
+  if (threeOnly) cluePieces = 3;
 
-  for (let a=0; a<attempts; a++){
-    const solTT = generateFullSolutionTT();
-    if (!solTT){ lastReason = "no full solution"; continue; }
+  const target = el("selTarget")?.value || "any";
 
-    const puzzleTT = buildPuzzleFromSolutionTT(solTT, cluePieces);
-    if (!puzzleTT){ lastReason = "build failed"; continue; }
+  let attempts = parseInt(el("numAttempts")?.value, 10);
+  if (!Number.isFinite(attempts) || attempts < 10) attempts = 200;
 
-    if (!wantUnique){
-      bestTT = puzzleTT;
-      break;
-    }
+  let budgetMs = parseInt(el("numBudgetMs")?.value, 10);
+  if (!Number.isFinite(budgetMs) || budgetMs < 200) budgetMs = 2500;
 
-    const info = countSolutions(puzzleTT, true); // only check if >1
-    if (info.ok && info.count === 1){
-      bestTT = puzzleTT;
-      break;
-    } else {
-      lastReason = info.ok ? ("not unique ("+info.count+"+)") : "invalid";
-    }
+  el("attemptsVal").textContent = "0";
+
+  const res = await generatePuzzleCore({
+    wantUnique, threeOnly, wantSpread, noDups,
+    cluePieces, target, attempts, budgetMs
+  });
+
+  // tried counter (approx): res.tried only counts candidate checks; show in UI
+  if (res && typeof res.tried === "number"){
+    el("attemptsVal").textContent = String(res.tried);
   }
 
-  if (!bestTT){
-    out.textContent = "Generator: keine passende Aufgabe gefunden.\nTipp: Unique aus oder mehr Bauteile geben.\n(" + lastReason + ")";
+  if (!res.ok){
+    out.textContent = "Generator: keine passende Aufgabe gefunden.\n" +
+      "Tipp: Budget/Attempts erhöhen, Target auf ANY oder mehr Bauteile geben.\n" +
+      "(" + (res.reason || "no match") + ")";
     setBusy(false);
     return;
   }
 
-  const g = ttToGrid(bestTT);
+  const g = ttToGrid(res.puzzleTT);
   applyGrid(g);
-  LastPuzzleTT = bestTT;
+  LastPuzzleTT = res.puzzleTT;
 
-  const d = difficultyFromPieces(cluePieces);
-  out.textContent = `generated ✓  |  pieces=${cluePieces}  |  difficulty=${d.toUpperCase()}  |  unique=${wantUnique ? "ON" : "OFF"}`;
+  LastGenDifficulty = { score: res.score, tier: res.tier, cluePieces: res.cluePieces };
+  updateDifficultyChip();
+
+  if (noDups) rememberPuzzle(res.puzzleTT);
+
+  const m = res.metrics || {ms:0,nodes:0,placements:0,undos:0};
+  out.textContent =
+    `generated ✓  |  clues=${res.cluePieces}  |  unique=${wantUnique ? "ON" : "OFF"}  |  score=${res.score}/10 (${String(res.tier).toUpperCase()})
+` +
+    `metrics: nodes=${m.nodes}  placements=${m.placements}  undos=${m.undos}  ms=${Math.round(m.ms)}  |  tried=${res.tried}  |  target=${String(res.target).toUpperCase()}`;
+
+  // Zahlen/Fakten direkt dazu: Placement-Analyse (wenn vorhanden)
+  if (res.placement && res.placement.ok){
+    const pa = res.placement;
+    const fact = `
+Heuristik: forcedMoves=${pa.forcedSeq.length}  avgPlacements≈${pa.stats.avg.toFixed(1)}  min=${pa.stats.min}  max=${pa.stats.max}  searchSpace~10^${pa.stats.log10space.toFixed(1)}`;
+    out.textContent += fact;
+  }
+
   setBusy(false);
 }
 
+
+// ---------- placement analysis (human-ish) ----------
+const EMPTY_TT = Array(H).fill("-".repeat(W)).join(",");
+
+let PieceLib = null;
+
+function ensurePieceLib(){
+  if (PieceLib) return;
+  const ss = new NoodleSolver();
+  // rr=1 => deterministische Order (0..11)
+  ss.Init(EMPTY_TT, 1);
+
+  PieceLib = {};
+  for (let pid=1; pid<=12; pid++){
+    const noodle = ss.Noodles[pid-1];
+    const o = noodle.o;
+    const l = noodle.l;
+    const orients = [];
+    for (let pp=0; pp<o; pp++){
+      const cells = [];
+      const base = pp<<3;
+      for (let ll=0; ll<l; ll++){
+        const off = noodle.x3y[base+ll]; // offset in (x<<3)+y space
+        const dx = (off >> 3);
+        const dy = (off & 7);
+        cells.push([dx,dy]);
+      }
+      // safety: normalize to min dx/dy
+      let minx = 999, miny = 999;
+      for (const [dx,dy] of cells){ if (dx<minx) minx=dx; if (dy<miny) miny=dy; }
+      const norm = cells.map(([dx,dy]) => [dx-minx, dy-miny]);
+      // canonical key to dedupe rotations/flips that end up identical
+      const key = norm.slice().sort((a,b)=>a[0]-b[0] || a[1]-b[1]).map(c=>c.join(":")).join("|");
+      if (!orients.some(o=>o.key===key)) orients.push({ key, cells:norm });
+    }
+    PieceLib[pid] = { orients };
+  }
+}
+
+function fixedPiecesFromTT(tt){
+  const g = ttToGrid(tt);
+  if (!g) return new Set();
+  const s = new Set();
+  for (let jj=0;jj<H;jj++) for (let ii=0;ii<W;ii++){
+    const p = g[ii][jj];
+    if (p>0) s.add(p);
+  }
+  return s;
+}
+
+function buildOccupiedFromTT(tt){
+  const g = ttToGrid(tt);
+  if (!g) return null;
+  const occ = Array.from({length: W}, () => Array(H).fill(false));
+  for (let jj=0;jj<H;jj++) for (let ii=0;ii<W;ii++){
+    occ[ii][jj] = g[ii][jj] > 0;
+  }
+  return occ;
+}
+
+function placementsForPiece(occ, pid){
+  ensurePieceLib();
+  const orients = PieceLib[pid].orients;
+  const placements = [];
+  for (const o of orients){
+    // compute bounding box
+    let maxx=0, maxy=0;
+    for (const [dx,dy] of o.cells){ if (dx>maxx) maxx=dx; if (dy>maxy) maxy=dy; }
+    for (let x0=0; x0<=W-1-maxx; x0++){
+      for (let y0=0; y0<=H-1-maxy; y0++){
+        let ok = true;
+        const cellsAbs = [];
+        for (const [dx,dy] of o.cells){
+          const x = x0+dx, y = y0+dy;
+          if (occ[x][y]) { ok=false; break; }
+          cellsAbs.push([x,y]);
+        }
+        if (ok) placements.push({ pid, cells: cellsAbs });
+      }
+    }
+  }
+  return placements;
+}
+
+function shuffleInPlace(a){
+  for (let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function entropy01(p){
+  // p in [0..1]
+  if (p<=0 || p>=1) return 0;
+  return -(p*Math.log2(p) + (1-p)*Math.log2(1-p));
+}
+
+// Heuristische „Logik“-Analyse: wie viele Placements je Piece, Forced Chain, grobe Search-Space Abschätzung
+function placementAnalysis(tt, budgetMs=1500){
+  const t0 = nowMs();
+  const fixed = fixedPiecesFromTT(tt);
+  const baseOcc = buildOccupiedFromTT(tt);
+  if (!baseOcc) return { ok:false, reason:"parse" };
+
+  const remaining = [];
+  for (let pid=1; pid<=12; pid++) if (!fixed.has(pid)) remaining.push(pid);
+
+  // Wir simulieren Forced Moves (Pieces mit exakt 1 Placement)
+  const occ = baseOcc.map(col => col.slice());
+  const placed = new Set();
+  const forcedSeq = [];
+
+  function recomputeCounts(){
+    const counts = new Map();
+    const placementsMap = new Map();
+    for (const pid of remaining){
+      if (placed.has(pid)) continue;
+      const pls = placementsForPiece(occ, pid);
+      counts.set(pid, pls.length);
+      placementsMap.set(pid, pls);
+      if (nowMs() - t0 > budgetMs) return { timeout:true, counts, placementsMap };
+    }
+    return { timeout:false, counts, placementsMap };
+  }
+
+  let step = 0;
+  let lastCounts = null;
+  let lastPlacementsMap = null;
+
+  while (true){
+    if (nowMs() - t0 > budgetMs) break;
+
+    const {timeout, counts, placementsMap} = recomputeCounts();
+    lastCounts = counts; lastPlacementsMap = placementsMap;
+    if (timeout) break;
+
+    // find any forced piece
+    let forced = null;
+    for (const [pid, c] of counts.entries()){
+      if (c === 1){
+        forced = pid; break;
+      }
+    }
+    if (!forced) break;
+
+    const placement = placementsMap.get(forced)[0];
+    forcedSeq.push({ pid: forced, cells: placement.cells });
+    for (const [x,y] of placement.cells) occ[x][y] = true;
+    placed.add(forced);
+    step++;
+    if (step > 30) break;
+  }
+
+  // Basic stats (ohne placed pieces)
+  const countsArr = [];
+  const perPiece = [];
+  if (lastCounts){
+    for (const pid of remaining){
+      if (placed.has(pid)) continue;
+      const c = lastCounts.get(pid) ?? 0;
+      countsArr.push(c);
+      perPiece.push({ pid, placements:c });
+    }
+  }
+  countsArr.sort((a,b)=>a-b);
+
+  const sum = countsArr.reduce((s,x)=>s+x,0);
+  const avg = countsArr.length ? sum / countsArr.length : 0;
+  const min = countsArr.length ? countsArr[0] : 0;
+  const max = countsArr.length ? countsArr[countsArr.length-1] : 0;
+
+  // Grobe Search-Space Abschätzung (upper bound): Produkt der Placements pro Piece
+  // -> wir geben log10 an, damit es "greifbar" bleibt.
+  const log10space = countsArr.reduce((s,c)=> s + Math.log10(Math.max(1,c)), 0);
+
+  // candidate for next hint if no forced: pick piece with min placements (MRV)
+  let hintPiece = null;
+  let hintPlacements = null;
+  if (lastCounts && lastPlacementsMap){
+    let bestC = Infinity;
+    for (const pid of remaining){
+      if (placed.has(pid)) continue;
+      const c = lastCounts.get(pid) ?? 0;
+      if (c > 0 && c < bestC){
+        bestC = c;
+        hintPiece = pid;
+        hintPlacements = lastPlacementsMap.get(pid) || null;
+      }
+    }
+  }
+
+  // suggest a split cell for hintPiece (max entropy coverage)
+  let split = null;
+  if (hintPiece && hintPlacements && hintPlacements.length){
+    const cover = Array.from({length: W}, () => Array(H).fill(0));
+    for (const pl of hintPlacements){
+      for (const [x,y] of pl.cells) cover[x][y] += 1;
+    }
+    let bestE=-1;
+    for (let y=0;y<H;y++) for (let x=0;x<W;x++){
+      if (baseOcc[x][y]) continue; // already filled
+      const p = cover[x][y] / hintPlacements.length;
+      const e = entropy01(p);
+      if (e > bestE){
+        bestE = e;
+        split = { x, y, p, entropy: e };
+      }
+    }
+  }
+
+  return {
+    ok:true,
+    fixedPieces: fixed.size,
+    remainingPieces: remaining.length,
+    forcedSeq,
+    perPiece: perPiece.sort((a,b)=>a.placements-b.placements),
+    stats: { avg, min, max, log10space },
+    hint: { piece: hintPiece, split, placements: hintPlacements ? hintPlacements.length : 0 },
+    ms: Math.max(0, nowMs()-t0)
+  };
+}
+
+function pieceLetter(pid){
+  return Letters.charAt(pid);
+}
+
+function formatCell(x,y){
+  return `(${x+1},${y+1})`; // 1-based for humans
+}
+
+function renderAnalysisText(tt){
+  const cluePieces = fixedPiecesFromTT(tt).size;
+  const mInfo = solveWithMetrics(tt);
+  const metrics = mInfo.ok ? mInfo.metrics : {ms:0,nodes:0,placements:0,undos:0};
+  const score = difficultyScoreFromMetrics(metrics, cluePieces);
+  const tier = difficultyTierFromScore(score);
+
+  const paBudget = parseInt(el("numAnalyzeBudgetMs")?.value, 10) || 1500;
+  const pa = placementAnalysis(tt, paBudget);
+
+  let lines = [];
+  lines.push(`Difficulty: ${score}/10 (${tier.toUpperCase()})  |  clues=${cluePieces}`);
+  lines.push(`Solver-metrics: nodes=${metrics.nodes}  placements=${metrics.placements}  undos=${metrics.undos}  ms≈${Math.round(metrics.ms)}`);
+
+  if (pa.ok){
+    lines.push(`Heuristik (Placements): remainingPieces=${pa.remainingPieces}  forcedMoves=${pa.forcedSeq.length}  avgPlacements≈${pa.stats.avg.toFixed(1)}  min=${pa.stats.min}  max=${pa.stats.max}`);
+    lines.push(`Rough search-space upper bound: ~10^${pa.stats.log10space.toFixed(1)} (Produkt der Placements pro verbleibendem Teil)`);
+    if (pa.forcedSeq.length){
+      const fm = pa.forcedSeq[0];
+      const cellsStr = fm.cells.map(([x,y])=>formatCell(x,y)).join(" ");
+      lines.push(`Next forced move: place ${pieceLetter(fm.pid)} at ${cellsStr}`);
+    } else if (pa.hint.piece){
+      let s = `Best next focus piece (MRV): ${pieceLetter(pa.hint.piece)} with ${pa.hint.placements} possible placements.`;
+      if (pa.hint.split){
+        s += ` Best split cell: ${formatCell(pa.hint.split.x, pa.hint.split.y)} (coverage ${(pa.hint.split.p*100).toFixed(0)}%, entropy ${pa.hint.split.entropy.toFixed(2)}).`;
+      }
+      lines.push(s);
+    }
+  } else {
+    lines.push("Heuristik: (konnte nicht berechnet werden)");
+  }
+
+  return { score, tier, cluePieces, metrics, pa, text: lines.join("\n") };
+}
+
+async function Analyze(){
+  const tt = gridToTT(Grid);
+  const rep = renderAnalysisText(tt);
+  el("outAnalysis").textContent = rep.text;
+  out.textContent = "analyzed ✓";
+}
+
+async function NextHint(){
+  const tt = gridToTT(Grid);
+  const rep = renderAnalysisText(tt);
+
+  // Hint rule: forced piece -> else split focus
+  if (rep.pa && rep.pa.ok && rep.pa.forcedSeq.length){
+    const fm = rep.pa.forcedSeq[0];
+    LastHint = { type:"forced_piece", pid: fm.pid, cells: fm.cells };
+    el("outAnalysis").textContent = rep.text + "\n\nHint: Zwangsplatzierung → Apply Hint setzt Teil " + pieceLetter(fm.pid) + ".";
+  } else if (rep.pa && rep.pa.ok && rep.pa.hint.piece){
+    LastHint = { type:"focus_piece", pid: rep.pa.hint.piece, split: rep.pa.hint.split };
+    el("outAnalysis").textContent = rep.text + "\n\nHint: Fokus-Teil → Versuche zuerst Teil " + pieceLetter(rep.pa.hint.piece) +
+      (rep.pa.hint.split ? (" (achte auf Zelle "+formatCell(rep.pa.hint.split.x, rep.pa.hint.split.y)+")") : "") + ".";
+  } else {
+    LastHint = null;
+    el("outAnalysis").textContent = rep.text + "\n\nHint: (keiner gefunden)";
+  }
+
+  out.textContent = "hint ready ✓";
+}
+
+function ApplyHint(){
+  if (!LastHint){
+    out.textContent = "no hint to apply";
+    return;
+  }
+  if (LastHint.type === "forced_piece"){
+    for (const [x,y] of LastHint.cells){
+      Grid[x][y] = LastHint.pid;
+      paintCell(x,y);
+    }
+    updateShareBoxFromGrid();
+    out.textContent = "applied forced piece " + pieceLetter(LastHint.pid) + " ✓";
+  } else {
+    out.textContent = "focus-hint: nichts automatisch gesetzt (nur Orientierung)";
+  }
+}
+
+// ---------- generator core (for UI + Batch) ----------
+async function generatePuzzleCore(opts){
+  const wantUnique = !!opts.wantUnique;
+  const threeOnly = !!opts.threeOnly;
+  const wantSpread = !!opts.wantSpread;
+  const noDups = !!opts.noDups;
+
+  let cluePieces = opts.cluePieces|0;
+  if (threeOnly) cluePieces = 3;
+
+  const target = (opts.target || "any");
+  let attempts = Math.max(10, Math.min(5000, opts.attempts|0));
+  let budgetMs = Math.max(200, Math.min(60000, opts.budgetMs|0));
+
+  let innerSamples;
+  if (cluePieces <= 3) innerSamples = 1400;
+  else if (cluePieces === 4) innerSamples = 900;
+  else if (cluePieces === 5) innerSamples = 650;
+  else if (cluePieces === 6) innerSamples = 480;
+  else innerSamples = 220;
+
+  const tStart = nowMs();
+  let tried = 0;
+
+  let bestTT = null;
+  let bestScore = null;
+  let bestTier = null;
+  let bestMetrics = null;
+
+  let fitCount = 0;
+  let bestDist = 999;
+  let lastReason = "";
+
+  function distToTarget(score){
+    const band = bandForTarget(target);
+    if (!band) return 0;
+    if (score < band.min) return band.min - score;
+    if (score > band.max) return score - band.max;
+    return 0;
+  }
+
+  function tryGreedyThree(solTT){
+    const solG = ttToGrid(solTT);
+    if (!solG) return null;
+    const cellsByPiece = cellsByPieceFromGrid(solG);
+    const pieces = Array.from(cellsByPiece.keys());
+
+    const startSize = 7; // guter Kompromiss
+    const maxStartTries = 220;
+
+    for (let s=0; s<maxStartTries; s++){
+      if (nowMs() - tStart > budgetMs) return null;
+
+      const keepArr = randomSubset(pieces, startSize);
+      if (wantSpread && !spreadOK(cellsByPiece, keepArr)) continue;
+
+      const cand0 = buildPuzzleFromSolutionTTKeepSet(solTT, new Set(keepArr));
+      if (!cand0) continue;
+      if (noDups && GeneratedHistory.has(cand0)) continue;
+      if (wantUnique){
+        const q = countSolutions(cand0, true);
+        if (!q.ok || q.count !== 1) continue;
+      }
+
+      // Greedy reduzieren
+      let keep = keepArr.slice();
+      while (keep.length > 3){
+        if (nowMs() - tStart > budgetMs) return null;
+        shuffleInPlace(keep);
+        let removed = false;
+        for (let i=0; i<keep.length; i++){
+          const p = keep[i];
+          const nextKeep = keep.filter(x=>x!==p);
+          if (wantSpread && nextKeep.length<=4 && !spreadOK(cellsByPiece, nextKeep)) continue;
+
+          const cand = buildPuzzleFromSolutionTTKeepSet(solTT, new Set(nextKeep));
+          if (!cand) continue;
+          if (noDups && GeneratedHistory.has(cand)) continue;
+
+          if (wantUnique){
+            const q2 = countSolutions(cand, true);
+            if (!q2.ok || q2.count !== 1) continue;
+          }
+
+          keep = nextKeep;
+          removed = true;
+          break;
+        }
+        if (!removed) return null;
+      }
+
+      const outTT = buildPuzzleFromSolutionTTKeepSet(solTT, new Set(keep));
+      return outTT;
+    }
+    return null;
+  }
+
+  for (let a=0; a<attempts; a++){
+    if (nowMs() - tStart > budgetMs) { lastReason = "budget reached"; break; }
+
+    const solTT = generateFullSolutionTT();
+    if (!solTT){ lastReason = "no full solution"; continue; }
+
+    const solG = ttToGrid(solTT);
+    if (!solG){ lastReason = "sol parse fail"; continue; }
+    const cellsByPiece = cellsByPieceFromGrid(solG);
+    const pieces = Array.from(cellsByPiece.keys());
+
+    let candidates = [];
+
+    // Spezial: 3 Teile + Unique => Greedy liefert deutlich hochwertigere Puzzles
+    if (threeOnly && wantUnique){
+      const g3 = tryGreedyThree(solTT);
+      if (g3) candidates.push(g3);
+    }
+
+    if (!candidates.length){
+      if (target === "any" && cluePieces >= 7 && !threeOnly){
+        candidates.push(buildPuzzleFromSolutionTT(solTT, cluePieces));
+      } else {
+        for (let s=0; s<innerSamples; s++){
+          if (nowMs() - tStart > budgetMs) { lastReason = "budget reached"; break; }
+          const keepArr = randomSubset(pieces, cluePieces);
+          const keepSet = new Set(keepArr);
+
+          if (wantSpread && cluePieces <= 4){
+            if (!spreadOK(cellsByPiece, keepArr)) continue;
+          }
+
+          const cand = buildPuzzleFromSolutionTTKeepSet(solTT, keepSet);
+          if (!cand) continue;
+          if (noDups && GeneratedHistory.has(cand)) continue;
+          candidates.push(cand);
+
+          if (candidates.length >= 90 && target === "any") break;
+          if (candidates.length >= 180 && target !== "any") break;
+        }
+      }
+    }
+
+    for (const puzzleTT of candidates){
+      tried++;
+      if (nowMs() - tStart > budgetMs) { lastReason = "budget reached"; break; }
+      if (!puzzleTT){ lastReason = "build failed"; continue; }
+
+      if (noDups && GeneratedHistory.has(puzzleTT)){ lastReason = "dup"; continue; }
+
+      if (wantUnique){
+        const info = countSolutions(puzzleTT, true);
+        if (!info.ok){ lastReason = "invalid"; continue; }
+        if (info.count !== 1){ lastReason = "not unique"; continue; }
+      }
+
+      if (target === "any"){
+        bestTT = puzzleTT;
+        lastReason = "";
+        break;
+      }
+
+      const sInfo = solveWithMetrics(puzzleTT);
+      if (!sInfo.ok){ lastReason = "metrics solve fail"; continue; }
+      const score = difficultyScoreFromMetrics(sInfo.metrics, cluePieces);
+      const tier = difficultyTierFromScore(score);
+      const dist = distToTarget(score);
+
+      if (dist === 0){
+        fitCount++;
+        if (Math.random() < (1/fitCount)){
+          bestTT = puzzleTT;
+          bestScore = score;
+          bestTier = tier;
+          bestMetrics = sInfo.metrics;
+        }
+      } else if (!bestTT || dist < bestDist){
+        bestDist = dist;
+        bestTT = puzzleTT;
+        bestScore = score;
+        bestTier = tier;
+        bestMetrics = sInfo.metrics;
+      }
+    }
+
+    if (bestTT && target === "any") break;
+  }
+
+  if (!bestTT){
+    return { ok:false, reason:lastReason || "no match", tried };
+  }
+
+  // Hard verify (einmal am Ende): zählt wirklich zu Ende (max 9999).
+  if (wantUnique){
+    const hard = countSolutions(bestTT, false);
+    if (!hard.ok || hard.count !== 1){
+      return { ok:false, reason:"hard unique failed", tried };
+    }
+  }
+
+  // Metrics/Score
+  if (bestScore == null || !bestMetrics){
+    const sInfo = solveWithMetrics(bestTT);
+    if (sInfo.ok){
+      bestMetrics = sInfo.metrics;
+      bestScore = difficultyScoreFromMetrics(bestMetrics, cluePieces);
+      bestTier = difficultyTierFromScore(bestScore);
+    } else {
+      bestMetrics = {ms:0,nodes:0,placements:0,undos:0};
+      bestScore = 5;
+      bestTier = "medium";
+    }
+  }
+
+  // Solution TT (für Export)
+  const solGrid = solveOnceFillGrid(bestTT);
+  const solutionTT = solGrid ? gridToTT(solGrid) : null;
+
+  // Heuristic placement analysis (für Zahlen/Fakten)
+  const pa = placementAnalysis(bestTT, 900);
+
+  return {
+    ok:true,
+    puzzleTT: bestTT,
+    solutionTT,
+    cluePieces,
+    score: bestScore,
+    tier: bestTier,
+    metrics: bestMetrics,
+    placement: pa,
+    tried,
+    budgetMs: opts.budgetMs|0,
+    target
+  };
+}
+
+// ---------- export helpers ----------
+let LastExportString = "";
+let LastExportFilename = "iq_puzzles.jsonl";
+
+function toCSV(rows){
+  const esc = (s) => {
+    const t = String(s ?? "");
+    if (/[",\\n]/.test(t)) return '"' + t.replace(/"/g,'""') + '"';
+    return t;
+  };
+  if (!rows.length) return "";
+  const keys = Object.keys(rows[0]);
+  const lines = [keys.map(esc).join(",")];
+  for (const r of rows){
+    lines.push(keys.map(k=>esc(r[k])).join(","));
+  }
+  return lines.join("\\n");
+}
+
+function buildExport(fmt, arr){
+  if (fmt === "json"){
+    return JSON.stringify(arr, null, 2);
+  }
+  if (fmt === "csv"){
+    return toCSV(arr);
+  }
+  // jsonl default
+  return arr.map(x=>JSON.stringify(x)).join("\\n");
+}
+
+function downloadText(filename, text){
+  const blob = new Blob([text], {type:"text/plain;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url), 500);
+}
+
+async function BatchGenerate(){
+  const n = Math.max(1, Math.min(5000, parseInt(el("numBatchN")?.value, 10) || 50));
+  const fmt = el("selExportFmt")?.value || "jsonl";
+
+  // Use current UI opts as template
+  const wantUnique = el("chkUnique").checked;
+  const threeOnly = el("chkThreeOnly").checked;
+  const wantSpread = el("chkSpread").checked;
+  const noDups = el("chkNoDups")?.checked ?? true;
+
+  let cluePieces = parseInt(el("rngPieces").value, 10);
+  if (threeOnly) cluePieces = 3;
+
+  const target = el("selTarget")?.value || "any";
+
+  let attempts = parseInt(el("numAttempts")?.value, 10);
+  if (!Number.isFinite(attempts) || attempts < 10) attempts = 200;
+
+  let budgetMs = parseInt(el("numBudgetMs")?.value, 10);
+  if (!Number.isFinite(budgetMs) || budgetMs < 200) budgetMs = 2500;
+
+  BatchResults = [];
+  const t0 = nowMs();
+  let okCount = 0;
+  let failCount = 0;
+
+  el("outBatch").textContent = "batch running…";
+  await new Promise(r=>setTimeout(r,25));
+
+  for (let i=0; i<n; i++){
+    const res = await generatePuzzleCore({
+      wantUnique, threeOnly, wantSpread, noDups,
+      cluePieces, target, attempts, budgetMs
+    });
+
+    if (!res.ok){
+      failCount++;
+      continue;
+    }
+    okCount++;
+
+    if (noDups) rememberPuzzle(res.puzzleTT);
+
+    const pl = res.placement && res.placement.ok ? res.placement : null;
+
+    BatchResults.push({
+      puzzleTT: res.puzzleTT,
+      solutionTT: res.solutionTT,
+      clues: res.cluePieces,
+      score: res.score,
+      tier: res.tier,
+      nodes: res.metrics.nodes,
+      placements: res.metrics.placements,
+      undos: res.metrics.undos,
+      ms: Math.round(res.metrics.ms),
+      forcedMoves: pl ? pl.forcedSeq.length : "",
+      avgPlacements: pl ? pl.stats.avg.toFixed(2) : "",
+      minPlacements: pl ? pl.stats.min : "",
+      log10space: pl ? pl.stats.log10space.toFixed(2) : ""
+    });
+
+    // small UI progress every 10
+    if (i % 10 === 0){
+      el("outBatch").textContent = `batch running… ${okCount}/${n} ok (fails ${failCount})`;
+      await new Promise(r=>setTimeout(r,0));
+    }
+  }
+
+  // Summary numbers
+  const scores = BatchResults.map(r=>r.score).filter(x=>Number.isFinite(x)).sort((a,b)=>a-b);
+  const mean = scores.length ? scores.reduce((s,x)=>s+x,0)/scores.length : 0;
+  const med = scores.length ? scores[Math.floor(scores.length/2)] : 0;
+  const min = scores.length ? scores[0] : 0;
+  const max = scores.length ? scores[scores.length-1] : 0;
+  const t1 = nowMs();
+
+  // Prepare export payload: include full objects (with TT + stats). JSONL is huge but workable.
+  LastExportString = buildExport(fmt, BatchResults);
+  LastExportFilename = `iq_puzzles_${threeOnly?3:cluePieces}clues_${target}_${BatchResults.length}x.${fmt === "jsonl" ? "jsonl" : fmt}`;
+
+  el("outBatch").textContent =
+    `Batch done ✓\n` +
+    `requested=${n}  |  ok=${okCount}  |  fails=${failCount}  |  seconds=${((t1-t0)/1000).toFixed(2)}\n` +
+    `Score stats (1..10): mean=${mean.toFixed(2)}  median=${med}  min=${min}  max=${max}\n` +
+    `Export ready: ${LastExportFilename}\n` +
+    `Hinweis: Bei 3 Teile + Unique sind fails normal – mit höherem Budget/Attempts steigt ok-rate.`;
+
+  out.textContent = "batch finished ✓";
+}
+
+function DownloadExport(){
+  if (!LastExportString){
+    out.textContent = "no export yet (run batch)";
+    return;
+  }
+  downloadText(LastExportFilename, LastExportString);
+  out.textContent = "download started ✓";
+}
+
 // ---------- actions ----------
+
 async function Solve(){
   setBusy(true);
   out.textContent = "solving...";
@@ -1102,6 +2126,26 @@ function wireUI(){
   el("btnCopyLink").addEventListener("click", CopyLink);
 
   el("rngPieces").addEventListener("input", ()=>{
+    el("piecesVal").textContent = String(el("rngPieces").value);
+    LastGenDifficulty = null;
+    updateDifficultyChip();
+  });
+
+  el("chkThreeOnly").addEventListener("change", ()=>{
+    LastGenDifficulty = null;
+    const on = el("chkThreeOnly").checked;
+    if (on){
+      el("rngPieces").value = "3";
+      el("piecesVal").textContent = "3";
+      el("rngPieces").disabled = true;
+    } else {
+      el("rngPieces").disabled = false;
+    }
+    updateDifficultyChip();
+  });
+
+  el("selTarget").addEventListener("change", ()=>{
+    // nur UI-Preview neu zeichnen
     updateDifficultyChip();
   });
 
@@ -1115,6 +2159,23 @@ function wireUI(){
   el("btnCopyCode").addEventListener("click", CopyCode);
   el("btnLoadCode").addEventListener("click", LoadCode);
 
+  el("btnAnalyze").addEventListener("click", Analyze);
+  el("btnNextHint").addEventListener("click", NextHint);
+  el("btnApplyHint").addEventListener("click", ApplyHint);
+
+  el("btnBatch").addEventListener("click", async ()=>{
+    setBusy(true);
+    try{ await BatchGenerate(); } finally { setBusy(false); }
+  });
+  el("btnDownload").addEventListener("click", DownloadExport);
+  el("btnClearHistory").addEventListener("click", ()=>{
+    clearHistory();
+    out.textContent = "history cleared ✓";
+  });
+
+  // sync pieces label
+  el("piecesVal").textContent = String(el("rngPieces").value);
+
   // Enter in share box loads
   txtShare.addEventListener("keydown", (e)=>{
     if (e.key === "Enter"){
@@ -1126,6 +2187,7 @@ function wireUI(){
 
 (function main(){
   initTheme();
+  loadHistory();
   buildPalette();
   buildBoard();
   wireUI();
